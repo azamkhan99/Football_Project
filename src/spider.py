@@ -21,7 +21,8 @@ class RadarChartMetrics:
         self.shots_df = shots_df
 
         self.metrics = {}
-        self.lineup = events_df["player"][events_df["team"] == self.team].unique()
+        self.lineup1 = events_df["player"][events_df["team"] == self.team].unique()
+        self.lineup2 = events_df["player"][events_df["team"] != self.team].unique()
 
     def run_all_metrics(self):
         self.get_shots_metrics()
@@ -31,7 +32,10 @@ class RadarChartMetrics:
         self.get_interceptions()
 
     def get_lineup(self):
-        return self.lineup
+        return self.lineup1
+
+    def get_lineup_2(self):
+        return self.lineup2
 
     def get_shots_metrics(self):
         shots_df = self.shots_df
@@ -288,5 +292,77 @@ class RadarChartMetrics:
             values=values,
             radar_color=["#6CADDF", "#FFFFFF"],
             title=title,
+        )
+        return fig, ax
+
+    def generate_comparison_chart(self, player1, player2):
+
+        self.run_all_metrics()
+
+        shots_success_df = self.metrics["shots_success"]
+        successful_dribbles = self.metrics["successful_dribbles"]
+        passes_count_df = self.metrics["passes_count"]
+        success_duels = self.metrics["success_duels"]
+        successful_interceptions = self.metrics["successful_interceptions"]
+
+        # concatenate the dataframes using outer join on the 'player' column
+        all_df = pd.concat(
+            [
+                passes_count_df,
+                shots_success_df,
+                successful_interceptions,
+                success_duels,
+                successful_dribbles,
+            ],
+            join="outer",
+            sort=False,
+        )
+
+        # groupby the dataframe by the 'player' column and sum the values
+        all_df = all_df.groupby("player", as_index=False).sum()
+
+        # sort the dataframe by the 'player' column
+        all_df = all_df.sort_values(by="player")
+
+        float_cols = all_df.select_dtypes(include="float64").columns
+        all_df[float_cols] = all_df[float_cols].astype(int)
+        int32_cols = all_df.select_dtypes(include="int32").columns
+        all_df[int32_cols] = all_df[int32_cols].round()
+        # all_df.set_index("player", inplace=True)
+        filter_all1 = all_df[all_df["player"] == player1]
+        filter_all2 = all_df[all_df["player"] == player2]
+        filter_all1.set_index("player", inplace=True)
+        filter_all2.set_index("player", inplace=True)
+
+        ## setting parameters
+        params = filter_all1.columns.tolist()
+        ## setting range values
+        ranges = [(0, 50), (0, 5), (0, 5), (0, 5), (0, 5)]
+
+        ## For Comparison. No need to add new ranges and params since it will be the same.
+        ## setting parameter values of both players
+        val_comp = filter_all1.iloc[0], filter_all2.iloc[0]
+        ## titles for each players
+        title_comp = dict(
+            title_name=f"{player1}",
+            title_color="#D00027",
+            subtitle_name=f"{self.team}",
+            subtitle_color="#000000",
+            title_name_2=f"{player2}",
+            title_color_2="#00A398",
+            subtitle_name_2=f"team2",
+            subtitle_color_2="#000000",
+            title_fontsize=18,
+            subtitle_fontsize=15,
+        )
+        ## plotting the radar chart
+        radar = Radar()
+        fig, ax = radar.plot_radar(
+            ranges=ranges,
+            params=params,
+            values=val_comp,
+            radar_color=["#D00027", "#00A398"],
+            title=title_comp,
+            compare=True,
         )
         return fig, ax

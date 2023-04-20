@@ -2,8 +2,11 @@ from mplsoccer import Pitch
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.patheffects as path_effects
 import numpy as np
 import streamlit as st
+import seaborn as sns
+import matplotlib.cm as cm
 import json
 from src.spider import RadarChartMetrics
 
@@ -105,6 +108,10 @@ def create_pass_network(team, period, data, json):
     # Create figure and axis using pitch object
     fig, ax = PITCH.draw(figsize=(16, 11))
 
+    colormap = "GnBu"
+    num_passes = m_player_pass_count.pass_count.values
+    colors = cm.get_cmap(colormap)(num_passes / num_passes.max())
+
     PITCH.arrows(
         m_player_pass_count.x,
         m_player_pass_count.y,
@@ -112,6 +119,8 @@ def create_pass_network(team, period, data, json):
         m_player_pass_count.y_end,
         alpha=0.3,
         ax=ax,
+        color=colors,
+        cmap=colormap,
     )
     PITCH.scatter(
         m_player_pass_count.x,
@@ -407,3 +416,70 @@ def create_base_stats(lineup_df, shots_df, df):
 #     fig, ax = radar_metrics.generate_spider_chart()
 #     return fig, ax, lineup
 #     # st.pyplot(fig)
+
+
+def create_heatmap(df, period, team, player):
+
+    # Set the color palette
+    sns.set_palette("dark")
+
+    # Filter for events in first half
+    events = df.loc[
+        (df["period"] == period)
+        & (df["possession_team"] == team)
+        & (df["player"] == player)
+    ]
+
+    # Calculate average location per player
+    # player_locs = events.groupby('player')['location_x', 'location_y'].reset_index()
+
+    fig, ax = PITCH.draw(figsize=(16, 11))
+
+    # Create heatmap
+    pitch = sns.kdeplot(
+        x=events["location_x"],
+        y=events["location_y"],
+        cmap="YlGnBu_r",
+        shade=True,
+        alpha=0.8,
+        levels=50,
+        zorder=2,
+        ax=ax,
+    )
+
+    # Add arrow
+    arrow = ax.annotate(
+        "Attacking Direction",
+        xy=(110, 40),
+        xytext=(60, 40),
+        arrowprops=dict(
+            arrowstyle="-|>", color="white", linewidth=2, mutation_scale=20
+        ),
+        ha="center",
+        va="center",
+        fontsize=14,
+        color="white",
+    )
+
+    # Add path effect to arrow
+    arrow.set_path_effects(
+        [path_effects.Stroke(linewidth=2, foreground="black"), path_effects.Normal()]
+    )
+
+    # Add colorbar
+    cb = fig.colorbar(pitch.collections[0], ax=ax)
+    cb.ax.set_facecolor("#202020")
+    cb.ax.yaxis.set_tick_params(color="white")
+    cb.outline.set_edgecolor("white")
+    cb.ax.tick_params(
+        labelsize=12, length=0, color="white", labelcolor="white", width=2
+    )
+
+    # Set plot title
+    ax.set_title("Match Summary", fontsize=26, fontweight="bold", y=1.08, color="white")
+
+    # Remove ticks and axis labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    st.pyplot(fig)
