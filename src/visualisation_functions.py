@@ -5,6 +5,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 import streamlit as st
 import json
+from src.spider import RadarChartMetrics
 
 PITCH = Pitch(
     pitch_type="statsbomb",
@@ -131,14 +132,6 @@ def create_pass_network(team, period, data, json):
             ha="center",
             ax=ax,
         )
-    # Create scatter plot with color coding by goals vs no goals
-    # colors = ['red' if x else 'green' for x in shots['outcome'] == 'Goal']
-    # ax.scatter(shots['x'], shots['y'], c=colors, edgecolors='white', alpha=0.8, s=200, zorder=3)
-
-    # Add legend
-    # goal_patch = mpatches.Patch(color='red', label='Goal')
-    # no_goal_patch = mpatches.Patch(color='green', label='No Goal')
-    # ax.legend(handles=[goal_patch, no_goal_patch], loc='lower right', fontsize=14, facecolor='white', edgecolor='white')
 
     # Set plot title
     ax.set_title(
@@ -165,7 +158,7 @@ def plot_pass_network(player, team, period, events_df):
     passes_df = df[df["type"] == "Pass"]
 
     for i, row in passes_df.iterrows():
-        team = row["team"]
+        side = row["team"]
         player = row["player"]
         start_x = row["location_x"]
         start_y = row["location_y"]
@@ -173,7 +166,7 @@ def plot_pass_network(player, team, period, events_df):
         end_y = np.nan
         for j in range(i + 1, len(df)):
             next_row = df.iloc[j]
-            if next_row["team"] == team:
+            if next_row["team"] == side:
                 if next_row["type"] == "Ball Receipt*":
                     end_x = next_row["location_x"]
                     end_y = next_row["location_y"]
@@ -182,8 +175,6 @@ def plot_pass_network(player, team, period, events_df):
                 break
         passes_df.at[i, "pass_end_location_x"] = end_x
         passes_df.at[i, "pass_end_location_y"] = end_y
-    st.write("TEST")
-    st.write(passes_df)
     # Define pitch dimensions
     pitchLengthX = 120
     pitchWidthY = 80
@@ -193,7 +184,7 @@ def plot_pass_network(player, team, period, events_df):
 
     # Filter for Man City in the 1st half
     man_city_passes = passes_df[
-        (passes_df["team"] == "Manchester City WFC") & (passes_df["period"] == 1)
+        (passes_df["team"] == team) & (passes_df["period"] == period)
     ]
     man_city_passes.reset_index(drop=True, inplace=True)
 
@@ -229,6 +220,7 @@ def plot_pass_network(player, team, period, events_df):
     legend_players = set()
 
     # Loop through each player's passes and plot them
+
     for player in player_passes["player"].unique():
         player_passes_subset = player_passes[
             player_passes["player"] == player
@@ -316,7 +308,10 @@ def plot_pass_network(player, team, period, events_df):
 
     # Set plot title with a readable font
     ax.set_title(
-        "Pass Network for Man City - 1st half", fontsize=20, fontweight="bold", y=1.08
+        f"Pass Network for {team} - half: {period}",
+        fontsize=20,
+        fontweight="bold",
+        y=1.08,
     )
 
     # Remove ticks and axis labels
@@ -325,3 +320,90 @@ def plot_pass_network(player, team, period, events_df):
 
     # Show the plot
     st.pyplot(fig)
+
+
+def create_base_stats(lineup_df, shots_df, df):
+
+    lineup = pd.DataFrame(lineup_df)
+    opponent = lineup.iloc[1, 1]
+
+    shots_mcfc = len(shots_df.loc[shots_df["team"] == "Manchester City WFC"])
+    shots_opp = len(shots_df.loc[shots_df["team"] == opponent])
+    xg_mcfc = shots_df.loc[shots_df["team"] == "Manchester City WFC"]["statsbomb_xg"]
+    xg_opp = shots_df.loc[shots_df["team"] == opponent]["statsbomb_xg"]
+    goals_mcfc = len(
+        shots_df.loc[
+            (shots_df["team"] == "Manchester City WFC")
+            & (shots_df["outcome"] == "Goal")
+        ]
+    )
+    goals_opp = len(
+        shots_df.loc[(shots_df["team"] == opponent) & (shots_df["outcome"] == "Goal")]
+    )
+    sot_mcfc = len(
+        shots_df.loc[
+            (
+                (shots_df["team"] == "Manchester City WFC")
+                & (shots_df["outcome"] == "Goal")
+            )
+            | (
+                (shots_df["team"] == "Manchester City WFC")
+                & (shots_df["outcome"] == "Blocked")
+            )
+            | (
+                (shots_df["team"] == "Manchester City WFC")
+                & (shots_df["outcome"] == "Saved")
+            )
+        ]
+    )
+    sot_opp = len(
+        shots_df.loc[
+            ((shots_df["team"] == opponent) & (shots_df["outcome"] == "Goal"))
+            | ((shots_df["team"] == opponent) & (shots_df["outcome"] == "Blocked"))
+            | ((shots_df["team"] == opponent) & (shots_df["outcome"] == "Saved"))
+        ]
+    )
+    foul_mcfc = len(
+        df.loc[(df["type"] == "Foul Committed") & (df["team"] == "Manchester City WFC")]
+    )
+    foul_opp = len(df.loc[(df["type"] == "Foul Committed") & (df["team"] == opponent)])
+
+    # Match stats table
+    stats = {
+        "Goals": [goals_mcfc, goals_opp],
+        "Expected Goals (XG)": [xg_mcfc.sum(), xg_opp.sum()],
+        "Shots": [shots_mcfc, shots_opp],
+        "Shots on Target": [sot_mcfc, sot_opp],
+        "Shot Conversion (%)": [
+            (100 * sot_mcfc / shots_mcfc),
+            (100 * sot_opp / shots_opp),
+        ],
+        "Fouls": [foul_mcfc, foul_opp],
+        "Yellow Cards": [],  # or bookings
+        "Corners": [],
+        "Offsides": [],
+        "Possession": [],
+    }
+    stats_df = df.from_dict(
+        stats, orient="index", columns=["Manchester City WFC", opponent]
+    )
+    st.dataframe(stats_df.round(2), use_container_width=True)
+
+
+# def plot_spider(team, period, shots_df, events_json, events_df):
+
+#     radar_metrics = RadarChartMetrics(
+#         player="Alex Greenwood",
+#         period=period,
+#         team=team,
+#         shots_df=shots_df,
+#         events_json=events_json,
+#         events_df=events_df,
+#     )
+#     lineup = list(radar_metrics.get_lineup())
+#     lineup = [l for l in lineup if l is not None]
+#     print(lineup)
+
+#     fig, ax = radar_metrics.generate_spider_chart()
+#     return fig, ax, lineup
+#     # st.pyplot(fig)

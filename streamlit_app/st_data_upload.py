@@ -56,6 +56,9 @@ class DataUploadPage:
                 if "normalized_events_df" not in st.session_state:
                     st.session_state["normalized_events_df"] = normalized_events_df
 
+                if "events_json" not in st.session_state:
+                    st.session_state["events_json"] = self.events_json
+
                 shots_df = dft.shots_preprocessing(self.events_json)
                 # session_state.set("shots", shots_df)
                 if "shots_df" not in st.session_state:
