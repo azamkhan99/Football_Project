@@ -1,17 +1,16 @@
-
 import pandas as pd
 import numpy as np
 
 
-class DataFrameTransformations():
+class DataFrameTransformations:
 
-    #def __call__(self):
+    # def __call__(self):
 
     def events_preprocessing(self, events_json):
-        '''
+        """
         Input = JSON file
         Output = df
-        '''
+        """
 
         # extract event data and flatten nested columns
         events = []
@@ -29,7 +28,9 @@ class DataFrameTransformations():
                 "play_pattern": event["play_pattern"].get("name"),
                 "team": event["team"].get("name"),
                 "player": event["player"].get("name") if "player" in event else None,
-                "position": event["position"].get("name") if "position" in event else None,
+                "position": event["position"].get("name")
+                if "position" in event
+                else None,
                 "location_x": event.get("location")[0] if "location" in event else None,
                 "location_y": event.get("location")[1] if "location" in event else None,
                 "duration": event.get("duration"),
@@ -44,13 +45,14 @@ class DataFrameTransformations():
                 "obv_against_after": event.get("obv_against_after"),
                 "obv_against_before": event.get("obv_against_before"),
                 "obv_against_net": event.get("obv_against_net"),
-                "obv_total_net": event.get("obv_total_net")
+                "obv_total_net": event.get("obv_total_net"),
             }
             events.append(flattened_event)
 
         df = pd.DataFrame(events)
+        normalized_df = pd.json_normalize(events_json)
 
-        return df
+        return df, normalized_df
 
     def shots_preprocessing(self, events_json):
 
@@ -76,7 +78,7 @@ class DataFrameTransformations():
                     "shot_goal_assist": event["shot"].get("goal_assist"),
                     "body_part": event["shot"]["body_part"]["name"],
                     "type": event["type"]["name"],
-                    "period": event["period"]
+                    "period": event["period"],
                 }
                 shots.append(shot_data)
 
@@ -87,29 +89,28 @@ class DataFrameTransformations():
 
     def passes_preprocessing(self, events_df):
 
-        passes_df = events_df[events_df['type'] == 'Pass']
+        passes_df = events_df[events_df["type"] == "Pass"]
 
         for i, row in passes_df.iterrows():
-            team = row['team']
-            player = row['player']
-            start_x = row['location_x']
-            start_y = row['location_y']
+            team = row["team"]
+            player = row["player"]
+            start_x = row["location_x"]
+            start_y = row["location_y"]
             end_x = np.nan
             end_y = np.nan
-            for j in range(i+1, len(events_df)):
+            for j in range(i + 1, len(events_df)):
                 next_row = events_df.iloc[j]
-                if next_row['team'] == team:
-                    if next_row['type'] == 'Ball Receipt*':
-                        end_x = next_row['location_x']
-                        end_y = next_row['location_y']
+                if next_row["team"] == team:
+                    if next_row["type"] == "Ball Receipt*":
+                        end_x = next_row["location_x"]
+                        end_y = next_row["location_y"]
                         break
                 else:
                     break
-            passes_df.at[i, 'pass_end_location_x'] = end_x
-            passes_df.at[i, 'pass_end_location_y'] = end_y
+            passes_df.at[i, "pass_end_location_x"] = end_x
+            passes_df.at[i, "pass_end_location_y"] = end_y
 
         return passes_df
-
 
     def lineups_preprocessing(self, lineups_json):
 
@@ -117,29 +118,31 @@ class DataFrameTransformations():
 
         return lineup_df
 
-
     def meta_preprocessing(self, meta_json):
 
         df = pd.json_normalize(meta_json)
 
-        meta_df = pd.DataFrame(columns=['name', 'number', 'ssiId'])
+        meta_df = pd.DataFrame(columns=["name", "number", "ssiId"])
 
         # Iterate over each row in the original dataframe
         for _, row in df.iterrows():
             # Flatten the 'homePlayers' column
-            for player in row['homePlayers']:
+            for player in row["homePlayers"]:
                 # Add a new row to the new dataframe with the flattened data
-                meta_df = meta_df.append({'name': player['name'],
-                                        'number': player['number'],
-                                        'ssiId': player['ssiId']},
-                                        ignore_index=True)
+                meta_df = meta_df.append(
+                    {
+                        "name": player["name"],
+                        "number": player["number"],
+                        "ssiId": player["ssiId"],
+                    },
+                    ignore_index=True,
+                )
 
-        meta_df = meta_df.rename(columns={'ssiId': 'playerID'})
+        meta_df = meta_df.rename(columns={"ssiId": "playerID"})
 
         return meta_df
 
-
-    '''
+    """
 
     def match_stats(self, shots_df):
 
@@ -166,16 +169,11 @@ class DataFrameTransformations():
             'Corners': [],
             'Offsides': [],
             'Possession': []
-            
+
         }
         stats_df = df.from_dict(stats, orient='index', columns = ['Manchester City WFC',opponent])
         stats_df.round(2)
 
         return stats_df
 
-    '''
-
-
-
-
-
+    """
