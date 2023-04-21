@@ -21,8 +21,8 @@ class RadarChartMetrics:
         self.shots_df = shots_df
 
         self.metrics = {}
-        self.lineup1 = events_df["player"][events_df["team"] == self.team].unique()
-        self.lineup2 = events_df["player"][events_df["team"] != self.team].unique()
+        self.lineup = events_df["player"][events_df["team"] == self.team].unique()
+        self.spider_values = []
 
     def run_all_metrics(self):
         self.get_shots_metrics()
@@ -32,10 +32,7 @@ class RadarChartMetrics:
         self.get_interceptions()
 
     def get_lineup(self):
-        return self.lineup1
-
-    def get_lineup_2(self):
-        return self.lineup2
+        return self.lineup
 
     def get_shots_metrics(self):
         shots_df = self.shots_df
@@ -213,25 +210,14 @@ class RadarChartMetrics:
 
         return metrics_df
 
-    # def generate_chart(self):
-    #     metrics_df = self.get_data()
-    #     metrics_dict = metrics_df.to_dict(orient='records')
-    #     chart_data = {
-    #         'labels': ['Shooting', 'Passing', 'Dribbling', 'Duels', 'Interceptions'],
-    #         'datasets': [
-    #             {
-    #                 'label': player['player'],
-    #                 'data': [player['successful_shots'], player['successful_passes'], player['successful_dribbles'], player['successful_duels'], player['successful_interceptions']],
-    #                 'backgroundColor': 'rgba(255, 99, 132, 0.2)',
-    #                 'borderColor': 'rgba(255, 99, 132, 1)',
-    #                 'borderWidth': 1
-    #             } for player in metrics_dict
-    #         ]
-    #     }
+    class SpiderChartValues:
+        def __init__(self, params, ranges, df, player) -> None:
+            self.params = params
+            self.ranges = ranges
+            self.df = df
+            self.player = player
 
-    #     return chart_data
-
-    def generate_spider_chart(self, player):
+    def generate_spider_chart_values(self, player):
 
         self.run_all_metrics()
 
@@ -272,11 +258,20 @@ class RadarChartMetrics:
         params = filter_all.columns.tolist()
         ## setting range values
         ranges = [(0, 50), (0, 5), (0, 5), (0, 5), (0, 5)]
-        ## setting parameter value
+
+        self.spider_values.append(
+            self.SpiderChartValues(
+                params=params, ranges=ranges, df=filter_all, player=player
+            )
+        )
+
+    def generate_spider_chart(self, spider_chart_values: SpiderChartValues):
+
+        filter_all = spider_chart_values.df
         values = filter_all.iloc[0]
         ## titles to make it pretty
         title = dict(
-            title_name=f"{player} - Half: {self.period}",
+            title_name=f"{spider_chart_values.player} - Half: {self.period}",
             title_color="#000000",
             subtitle_name=f"{self.team}",
             subtitle_color="#D00027",
@@ -287,8 +282,8 @@ class RadarChartMetrics:
         radar = Radar()
         ## plotting the radar chart
         fig, ax = radar.plot_radar(
-            ranges=ranges,
-            params=params,
+            ranges=spider_chart_values.ranges,
+            params=spider_chart_values.params,
             values=values,
             radar_color=["#6CADDF", "#FFFFFF"],
             title=title,
@@ -366,3 +361,36 @@ class RadarChartMetrics:
             compare=True,
         )
         return fig, ax
+
+    # def comparison_spider(
+    #     self, player1_values: SpiderChartValues, player2_values: SpiderChartValues
+    # ):
+
+    #     filter_all1 = player1_values.df
+    #     filter_all2 = player2_values.df
+
+    #     val_comp = filter_all1.iloc[0], filter_all2.iloc[0]
+    #     ## titles for each players
+    #     title_comp = dict(
+    #         title_name=f"{player1_values.player}",
+    #         title_color="#D00027",
+    #         subtitle_name=f"{self.team}",
+    #         subtitle_color="#000000",
+    #         title_name_2=f"{player2_values.player}",
+    #         title_color_2="#00A398",
+    #         subtitle_name_2=f"team2",
+    #         subtitle_color_2="#000000",
+    #         title_fontsize=18,
+    #         subtitle_fontsize=15,
+    #     )
+    #     ## plotting the radar chart
+    #     radar = Radar()
+    #     fig, ax = radar.plot_radar(
+    #         ranges=player1_values.ranges,
+    #         params=player2_values.params,
+    #         values=val_comp,
+    #         radar_color=["#D00027", "#00A398"],
+    #         title=title_comp,
+    #         compare=True,
+    #     )
+    #     return fig, ax
