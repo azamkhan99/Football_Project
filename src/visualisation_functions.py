@@ -13,7 +13,7 @@ from src.spider import RadarChartMetrics
 PITCH = Pitch(
     pitch_type="statsbomb",
     line_color="#ffffff",
-    pitch_color="#444444",
+    pitch_color="#567d46",
     goal_type="box",
 )
 
@@ -21,7 +21,10 @@ PITCH = Pitch(
 def create_shots_vis(team, period, shots_df):
 
     # Filter for shots in first half
-    shots = shots_df[(shots_df["team"] == team) & (shots_df["period"] == period)]
+    if period == "FT":
+        shots = shots_df[(shots_df["team"] == team)]
+    else:
+        shots = shots_df[(shots_df["team"] == team) & (shots_df["period"] == period)]
 
     # Create figure and axis using pitch object
     fig, ax = PITCH.draw(figsize=(16, 11))
@@ -39,7 +42,7 @@ def create_shots_vis(team, period, shots_df):
     )
 
     # Add legend
-    goal_patch = mpatches.Patch(color="red", label="Goal")
+    goal_patch = mpatches.Patch(color="red", label="GOAL")
     no_goal_patch = mpatches.Patch(color="green", label="No Goal")
     ax.legend(
         handles=[goal_patch, no_goal_patch],
@@ -76,8 +79,12 @@ def create_pass_network(team, period, data, json):
     numbers = numbers[["player.name", "jersey_number"]]
     numbers.columns = ["player", "number"]
 
-    mcfc = df_all.loc[(df_all["team.name"] == team) & (df_all["period"] == period)]
-    mcfc2 = df.loc[(df["team"] == team) & (df["period"] == period)]
+    if period == "FT":
+        mcfc = df_all.loc[(df_all["team.name"] == team)]
+        mcfc2 = df.loc[(df["team"] == team)]
+    else:
+        mcfc = df_all.loc[(df_all["team.name"] == team) & (df_all["period"] == period)]
+        mcfc2 = df.loc[(df["team"] == team) & (df["period"] == period)]
 
     m_pass = mcfc.loc[
         (mcfc["type.name"] == "Pass") & (mcfc["pass.recipient.name"].notna())
@@ -95,6 +102,9 @@ def create_pass_network(team, period, data, json):
     )
     m_player_pass_count.columns = ["player", "pass_recipient_name", "pass_count"]
     m_avg_loc.columns = ["player", "x", "y"]
+    m_per_player_pass_count.columns = ["player", "pass_count"]
+    m_per_player_pass_count = m_per_player_pass_count.merge(m_avg_loc, on="player")
+
     m_player_pass_count = m_player_pass_count.merge(m_avg_loc, on="player")
     m_avg_loc.columns = ["pass_recipient_name", "x_end", "y_end"]
     m_player_pass_count = m_player_pass_count.merge(m_avg_loc, on="pass_recipient_name")
@@ -108,7 +118,7 @@ def create_pass_network(team, period, data, json):
     # Create figure and axis using pitch object
     fig, ax = PITCH.draw(figsize=(16, 11))
 
-    colormap = "GnBu"
+    colormap = "magma"
     num_passes = m_player_pass_count.pass_count.values
     colors = cm.get_cmap(colormap)(num_passes / num_passes.max())
 
@@ -123,14 +133,19 @@ def create_pass_network(team, period, data, json):
         cmap=colormap,
     )
     PITCH.scatter(
-        m_player_pass_count.x,
-        m_player_pass_count.y,
+        m_per_player_pass_count.x,
+        m_per_player_pass_count.y,
         alpha=1,
-        s=600,
+        s=100 * m_per_player_pass_count.pass_count,
         color="#6CABDD",
         edgecolor="white",
         ax=ax,
     )
+
+    cax = fig.add_axes([0.95, 0.25, 0.03, 0.5])
+    cb = plt.colorbar(cm.ScalarMappable(cmap=colormap), cax=cax)
+    cb.ax.tick_params(labelsize=14)
+    cb.set_label("Number of Passes", fontsize=16)
 
     for i in range(len(m_player_pass_count)):
         PITCH.annotate(
@@ -158,7 +173,7 @@ def create_pass_network(team, period, data, json):
     st.pyplot(fig)
 
 
-def plot_pass_network(player, team, period, events_df):
+def plot_pass_network(selected_player, team, period, events_df):
 
     # Create a DataFrame from the data
     df = events_df
@@ -191,10 +206,17 @@ def plot_pass_network(player, team, period, events_df):
     # Create figure and axis
     fig, ax = PITCH.draw(figsize=(16, 11))
 
-    # Filter for Man City in the 1st half
-    man_city_passes = passes_df[
-        (passes_df["team"] == team) & (passes_df["period"] == period)
-    ]
+    # Filter for selected team in the 1st half
+    if period == "FT":
+        man_city_passes = passes_df[
+            (passes_df["team"] == team) & (passes_df["player"] == selected_player)
+        ]
+    else:
+        man_city_passes = passes_df[
+            (passes_df["team"] == team)
+            & (passes_df["period"] == period)
+            & (passes_df["player"] == selected_player)
+        ]
     man_city_passes.reset_index(drop=True, inplace=True)
 
     # Group passes by player
@@ -255,7 +277,7 @@ def plot_pass_network(player, team, period, events_df):
                 head_width=2,
                 head_length=2,
                 fc=color,
-                ec="gray",
+                ec="black",
                 alpha=0.6,
                 linewidth=linewidth,
                 zorder=1,
@@ -267,17 +289,6 @@ def plot_pass_network(player, team, period, events_df):
                 y_start,
                 marker="s",
                 color=color,
-                edgecolors="black",
-                linewidth=linewidth,
-                alpha=0.7,
-                s=size,
-                zorder=2,
-            )
-            ax.scatter(
-                x_end,
-                y_end,
-                marker="o",
-                color="white",
                 edgecolors="black",
                 linewidth=linewidth,
                 alpha=0.7,
@@ -317,10 +328,10 @@ def plot_pass_network(player, team, period, events_df):
 
     # Set plot title with a readable font
     ax.set_title(
-        f"Pass Network for {team} - half: {period}",
-        fontsize=20,
+        f"Pass Map for {player} - Half: {period}",
+        fontsize=30,
         fontweight="bold",
-        y=1.08,
+        y=1,
     )
 
     # Remove ticks and axis labels
@@ -396,7 +407,14 @@ def create_base_stats(lineup_df, shots_df, df):
     stats_df = df.from_dict(
         stats, orient="index", columns=["Manchester City WFC", opponent]
     )
-    st.dataframe(stats_df.round(2), use_container_width=True)
+
+    def highlight_max(s):
+        is_max = s == s.max()
+        return ["background-color: yellow" if v else "" for v in is_max]
+
+    stats_df = stats_df.round(1)
+    s = stats_df.style.highlight_max(color="yellow", axis=1)
+    st.dataframe(s, use_container_width=True)
 
 
 # def plot_spider(team, period, shots_df, events_json, events_df):
@@ -424,11 +442,14 @@ def create_heatmap(df, period, team, player):
     sns.set_palette("dark")
 
     # Filter for events in first half
-    events = df.loc[
-        (df["period"] == period)
-        & (df["possession_team"] == team)
-        & (df["player"] == player)
-    ]
+    if period == "FT":
+        events = df.loc[(df["possession_team"] == team) & (df["player"] == player)]
+    else:
+        events = df.loc[
+            (df["period"] == period)
+            & (df["possession_team"] == team)
+            & (df["player"] == player)
+        ]
 
     # Calculate average location per player
     # player_locs = events.groupby('player')['location_x', 'location_y'].reset_index()
@@ -483,3 +504,78 @@ def create_heatmap(df, period, team, player):
     ax.set_yticks([])
 
     st.pyplot(fig)
+
+
+def step_graph(json_file, opponent, period):
+
+    df_all = json_file
+
+    if period == "FT":
+        mcfc_shots = df_all.loc[
+            ((df_all["type.name"] == "Shot") | (df_all["type.name"] == "Half End"))
+            # & (df_all["period"] == period)
+        ]
+    else:
+        mcfc_shots = df_all.loc[
+            ((df_all["type.name"] == "Shot") | (df_all["type.name"] == "Half End"))
+            & (df_all["period"] == period)
+        ]
+    mcfc_shots = mcfc_shots[
+        [
+            "timestamp",
+            "minute",
+            "second",
+            "team.name",
+            "location",
+            "player.name",
+            "shot.statsbomb_xg",
+            "shot.end_location",
+            "shot.outcome.name",
+        ]
+    ]
+
+    mcfc_sumxg = mcfc_shots.loc[mcfc_shots["team.name"] == "Manchester City WFC"][
+        ["timestamp", "minute", "second", "shot.statsbomb_xg"]
+    ]
+    mcfc_sumxg = mcfc_sumxg.fillna(0)
+    mcfc_sumxg["xg_sum"] = mcfc_sumxg["shot.statsbomb_xg"].cumsum()
+
+    opp_sumxg = mcfc_shots.loc[mcfc_shots["team.name"] == opponent][
+        ["timestamp", "minute", "second", "shot.statsbomb_xg"]
+    ]
+    opp_sumxg = opp_sumxg.fillna(0)
+    opp_sumxg["xg_sum"] = opp_sumxg["shot.statsbomb_xg"].cumsum()
+
+    zero_row = pd.DataFrame(
+        [[0] * mcfc_sumxg.shape[1]], columns=mcfc_sumxg.columns, index=[0]
+    )
+
+    # simply concatenate both dataframes
+    mcfc_sumxg = pd.concat([zero_row, mcfc_sumxg]).reset_index(drop=True)
+    opp_sumxg = pd.concat([zero_row, opp_sumxg]).reset_index(drop=True)
+
+    mcfc_sumxg
+    fig, ax = plt.subplots()
+    fig.set_facecolor("#444444")
+    ax.patch.set_facecolor("#444444")
+    mcfc_sumxg.plot(
+        x="minute", y="xg_sum", drawstyle="steps", ax=ax, color="#6CABDD", linewidth=2
+    )
+    opp_sumxg.plot(
+        x="minute", y="xg_sum", ax=ax, drawstyle="steps", color="red", linewidth=2
+    )
+    plt.xticks(color="white")
+    plt.yticks(color="white")
+    plt.ylabel("xG", color="white")
+    plt.xlabel("Minute", color="white")
+    plt.title(
+        f"Expected Goals for Manchester City WFC vs {opponent}", color="white", y=1
+    )
+    ax.grid(lw=0.5, color="lightgrey", axis="y", zorder=1)
+    plt.legend(["Manchester City WFC", opponent])
+
+    # next annotate goals
+    # for i in mcfc_shots.iterrows:
+    st.pyplot(fig)
+
+    # xg curve seems to be one period behind, ie first xg should be at 3 mins not 0 mins

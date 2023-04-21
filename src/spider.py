@@ -37,11 +37,16 @@ class RadarChartMetrics:
     def get_shots_metrics(self):
         shots_df = self.shots_df
         # filter for shots with 'outcome' of 'Goal', 'period' of 1, and team of 'Manchester City WFC'
-        shots_filter = (
-            (shots_df["outcome"] == "Goal")
-            & (shots_df["period"] == self.period)
-            & (shots_df["team"] == self.team)
-        )
+        if self.period == "FT":
+            shots_filter = (shots_df["outcome"] == "Goal") & (
+                shots_df["team"] == self.team
+            )
+        else:
+            shots_filter = (
+                (shots_df["outcome"] == "Goal")
+                & (shots_df["period"] == self.period)
+                & (shots_df["team"] == self.team)
+            )
 
         # create a new DataFrame with the filtered data
         shots_success_df = shots_df.loc[
@@ -64,9 +69,12 @@ class RadarChartMetrics:
         # pass metrics
         df = self.events_df
         passes_df = df[df["type"] == "Pass"]
-        passes_period1_mancity = passes_df[
-            (passes_df["period"] == self.period) & (passes_df["team"] == self.team)
-        ]
+        if self.period == "FT":
+            passes_period1_mancity = passes_df[(passes_df["team"] == self.team)]
+        else:
+            passes_period1_mancity = passes_df[
+                (passes_df["period"] == self.period) & (passes_df["team"] == self.team)
+            ]
 
         passes_count = (
             passes_period1_mancity[passes_period1_mancity["type"] == "Pass"]
@@ -99,7 +107,8 @@ class RadarChartMetrics:
 
         # Create DataFrame from extracted data
         dribbles_df = pd.DataFrame(dribbles)
-        dribbles_df = dribbles_df[(dribbles_df["period"]) == self.period]
+        if self.period != "FT":
+            dribbles_df = dribbles_df[(dribbles_df["period"]) == self.period]
 
         # Apply a lambda function to extract the "name" value from the "outcome" dictionary
         dribbles_df["outcome"] = dribbles_df["outcome"].apply(lambda x: x["name"])
@@ -134,7 +143,8 @@ class RadarChartMetrics:
 
         # Create DataFrame from extracted data
         duels_df = pd.DataFrame(duels)
-        duels_df = duels_df[(duels_df["period"]) == self.period]
+        if self.period != "FT":
+            duels_df = duels_df[(duels_df["period"]) == self.period]
         duels_df = duels_df.loc[duels_df["outcome"].notnull()]
         duels_df["outcome"] = duels_df["outcome"].apply(lambda x: x["name"])
         success_duels_df = duels_df.loc[
@@ -168,7 +178,10 @@ class RadarChartMetrics:
 
         # Create DataFrame from extracted data
         interceptions_df = pd.DataFrame(interceptions)
-        interceptions_df = interceptions_df[(interceptions_df["period"]) == self.period]
+        if self.period != "FT":
+            interceptions_df = interceptions_df[
+                (interceptions_df["period"]) == self.period
+            ]
         interceptions_df = interceptions_df.loc[interceptions_df["team"] != self.team]
         successful_interceptions = (
             interceptions_df.groupby("player")

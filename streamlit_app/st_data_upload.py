@@ -19,10 +19,10 @@ class DataUploadPage:
         st.session_state["current_page_index"] = 0
 
         # Create a list of pages
-        pages = ["Data Upload", "Visualisations"]
+        # pages = ["Data Upload", "Visualisations"]
 
         # Create a sidebar with a dropdown menu to select the page
-        page_number = st.sidebar.selectbox("Select a page", pages)
+        # page_number = st.sidebar.selectbox("Select a page", pages)
 
         st.title(self.title())
         st.write("WORK ON A BETTER DESCRIPTION: Upload Match data files below")
