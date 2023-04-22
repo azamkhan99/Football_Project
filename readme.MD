@@ -1,5 +1,10 @@
 #  Football_Project
 
+This is a prototype web-application created for the Manchester City WFC - Hays Hackathon.
+
+- Team Name: Data Strikers
+- Team: Azam Khan, Shakishnan Balakumar, Gaurav Gidwani, Dilan Premkumar, Angus Bolton
+
 To launch web-app locally:
 
 1. Create new virtual environment
