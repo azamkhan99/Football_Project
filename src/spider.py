@@ -34,6 +34,19 @@ class RadarChartMetrics:
     def get_lineup(self):
         return self.lineup
 
+    def get_player_positions(self, position_dict):
+        df_all = pd.json_normalize(self.events_json)
+        lineup1 = df_all.loc[df_all["team.name"] == self.team]["tactics.lineup"].iloc[0]
+        numbers = pd.json_normalize(lineup1)
+        numbers = numbers[["player.name", "position.name"]]
+
+        lineup = numbers.apply(
+            lambda row: f"{row['player.name']} - {position_dict.get(row['position.name'])}",
+            axis=1,
+        ).tolist()
+
+        return lineup
+
     def get_shots_metrics(self):
         shots_df = self.shots_df
         # filter for shots with 'outcome' of 'Goal', 'period' of 1, and team of 'Manchester City WFC'
@@ -230,7 +243,7 @@ class RadarChartMetrics:
             self.df = df
             self.player = player
 
-    def generate_spider_chart_values(self, player):
+    def generate_spider_chart_values_df(self):
 
         self.run_all_metrics()
 
@@ -264,13 +277,67 @@ class RadarChartMetrics:
         int32_cols = all_df.select_dtypes(include="int32").columns
         all_df[int32_cols] = all_df[int32_cols].round()
         # all_df.set_index("player", inplace=True)
+
+        return all_df
+
+    def generate_spider_chart_values(self, player):
+
+        self.run_all_metrics()
+
+        shots_success_df = self.metrics["shots_success"]
+        successful_dribbles = self.metrics["successful_dribbles"]
+        passes_count_df = self.metrics["passes_count"]
+        success_duels = self.metrics["success_duels"]
+        successful_interceptions = self.metrics["successful_interceptions"]
+
+        # concatenate the dataframes using outer join on the 'player' column
+        all_df = pd.concat(
+            [
+                passes_count_df,
+                shots_success_df,
+                successful_interceptions,
+                success_duels,
+                successful_dribbles,
+            ],
+            join="outer",
+            sort=False,
+        )
+        all_df.rename(
+            columns={
+                "successful_passes": "Succesful Passes",
+                "successful_shots": "Shot Success",
+                "successful_interceptions": "Successful Interceptions",
+                "successful_duels": "Duel Success",
+                "successful_dribbles": "Successful Dribbles",
+            },
+            inplace=True,
+        )
+
+        # groupby the dataframe by the 'player' column and sum the values
+        all_df = all_df.groupby("player", as_index=False).sum()
+
+        # sort the dataframe by the 'player' column
+        all_df = all_df.sort_values(by="player")
+
+        float_cols = all_df.select_dtypes(include="float64").columns
+        all_df[float_cols] = all_df[float_cols].astype(int)
+        int32_cols = all_df.select_dtypes(include="int32").columns
+        all_df[int32_cols] = all_df[int32_cols].round()
+        # all_df.set_index("player", inplace=True)
         filter_all = all_df[all_df["player"] == player]
         filter_all.set_index("player", inplace=True)
 
         ## setting parameters
         params = filter_all.columns.tolist()
         ## setting range values
-        ranges = [(0, 50), (0, 5), (0, 5), (0, 5), (0, 5)]
+        # ranges = [(0, 50), (0, 5), (0, 5), (0, 5), (0, 5)]
+        ranges = [
+            (0, filter_all["Succesful Passes"].max().round(1) + 5),
+            (0, 5),
+            (0, 5),
+            (0, 5),
+            (0, 5),
+        ]
 
         self.spider_values.append(
             self.SpiderChartValues(
@@ -325,6 +392,17 @@ class RadarChartMetrics:
             join="outer",
             sort=False,
         )
+        all_df.rename(
+            columns={
+                "successful_passes": "Succesful Passes",
+                "successful_shots": "Shot Success",
+                "successful_interceptions": "Successful Interceptions",
+                "successful_duels": "Duel Success",
+                "successful_dribbles": "Successful Dribbles",
+            },
+            inplace=True,
+        )
+        st.dataframe(all_df)
 
         # groupby the dataframe by the 'player' column and sum the values
         all_df = all_df.groupby("player", as_index=False).sum()

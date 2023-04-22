@@ -18,6 +18,36 @@ from soccerplots import radar_chart
 from soccerplots.radar_chart import Radar
 
 
+POSITION_LABELS = {
+    "Goalkeeper": "GK",
+    "Right Back": "RB",
+    "Right Center Back": "RCB",
+    "Center Back": "CB",
+    "Left Center Back": "LCB",
+    "Left Back": "LB",
+    "Right Wing Back": "RWB",
+    "Left Wing Back": "LWB",
+    "Right Defensive Midfield": "RDM",
+    "Center Defensive Midfield": "CDM",
+    "Left Defensive Midfield": "LDM",
+    "Right Midfield": "RM",
+    "Right Center Midfield": "RCM",
+    "Center Midfield": "CM",
+    "Left Center Midfield": "LCM",
+    "Left Midfield": "LM",
+    "Right Wing": "RW",
+    "Right Attacking Midfield": "RAM",
+    "Center Attacking Midfield": "CAM",
+    "Left Attacking Midfield": "LAM",
+    "Left Wing": "LW",
+    "Right Center Forward": "RCF",
+    "Striker": "ST",
+    "Left Center Forward": "LCF",
+    "Secondary Striker": "SS",
+    "Center Forward": "CF",
+}
+
+
 def comparison_spider(player1_values, team1, player2_values, team2):
 
     filter_all1 = player1_values.df
@@ -50,13 +80,21 @@ def comparison_spider(player1_values, team1, player2_values, team2):
     return fig, ax
 
 
-st.title("Manchester City WFC visualisation")
+# st.title("Manchester City WFC visualisation")
 
 shots_df = st.session_state["shots_df"]
 events_df = st.session_state["events_df"]
 lineup_df = st.session_state["lineups"]
+opponent = lineup_df.iloc[1, 1]
 events_json = st.session_state["normalized_events_df"]
-create_base_stats(lineup_df=lineup_df, shots_df=shots_df, df=events_df)
+stats_df, goals_mcfc, goals_opp = create_base_stats(
+    lineup_df=lineup_df, shots_df=shots_df, df=events_df
+)
+
+st.title(f"Manchester City WFC {goals_mcfc} - {goals_opp} {opponent}")
+
+s = stats_df.style.highlight_max(color="yellow", axis=1)
+st.dataframe(s, use_container_width=True)
 
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
@@ -97,68 +135,6 @@ with tab2:
 
     net1, net2 = st.columns(2)
 
-    # with net1:
-
-    #     col1, col2, col3 = st.columns(3)
-    #     df_all = events_json
-
-    #     with col1:
-    #         team_option = st.selectbox("Select Side", (np.unique(shots_df["team"])))
-    #     with col2:
-    #         period_option = st.selectbox(
-    #             "Select Period", (np.unique(shots_df["period"]))
-    #         )
-    #     with col3:
-    #         lineup1 = df_all.loc[df_all["team.name"] == team_option][
-    #             "tactics.lineup"
-    #         ].iloc[0]
-    #         numbers = pd.json_normalize(lineup1)
-
-    #         numbers = numbers[["player.name", "jersey_number"]]
-    #         numbers.columns = ["player", "number"]
-
-    #         lineup = np.array(numbers["player"])
-
-    #         player_option_n = st.selectbox("Select Passer", lineup)
-
-    #     plot_pass_network(
-    #         selected_player=player_option_n,
-    #         team=team_option,
-    #         period=period_option,
-    #         events_df=events_df,
-    #     )
-
-    # with net2:
-
-    #     col1, col2, col3 = st.columns(3)
-    #     df_all = events_json
-
-    #     with col1:
-    #         team_option = st.selectbox("Select Side", (np.unique(shots_df["team"])))
-    #     with col2:
-    #         period_option = st.selectbox(
-    #             "Select Period", (np.unique(shots_df["period"]))
-    #         )
-    #     with col3:
-    #         lineup1 = df_all.loc[df_all["team.name"] == team_option][
-    #             "tactics.lineup"
-    #         ].iloc[0]
-    #         numbers = pd.json_normalize(lineup1)
-
-    #         numbers = numbers[["player.name", "jersey_number"]]
-    #         numbers.columns = ["player", "number"]
-
-    #         lineup = np.array(numbers["player"])
-
-    #         player_option_n = st.selectbox("Select Passer", lineup)
-
-    #     plot_pass_network(
-    #         selected_player=player_option_n,
-    #         team=team_option,
-    #         period=period_option,
-    #         events_df=events_df,
-    #     )
-
     with net1:
 
         df_all = events_json
@@ -171,16 +147,17 @@ with tab2:
             0
         ]
         numbers = pd.json_normalize(lineup1)
+        numbers = numbers[["player.name", "position.name"]]
 
-        numbers = numbers[["player.name", "jersey_number"]]
-        numbers.columns = ["player", "number"]
-
-        lineup = np.array(numbers["player"])
+        lineup = numbers.apply(
+            lambda row: f"{row['player.name']} - {POSITION_LABELS.get(row['position.name'])}",
+            axis=1,
+        ).tolist()
 
         player_option_n = st.selectbox("Select Passer", lineup)
 
         plot_pass_network(
-            selected_player=player_option_n,
+            selected_player=player_option_n.split(" -")[0],
             team=team_option,
             period=period_option,
             events_df=events_df,
@@ -198,16 +175,17 @@ with tab2:
             0
         ]
         numbers = pd.json_normalize(lineup1)
+        numbers = numbers[["player.name", "position.name"]]
 
-        numbers = numbers[["player.name", "jersey_number"]]
-        numbers.columns = ["player", "number"]
-
-        lineup = np.array(numbers["player"])
+        lineup = numbers.apply(
+            lambda row: f"{row['player.name']} - {POSITION_LABELS.get(row['position.name'])}",
+            axis=1,
+        ).tolist()
 
         player_option_n = st.selectbox("Select Passer2", lineup)
 
         plot_pass_network(
-            selected_player=player_option_n,
+            selected_player=player_option_n.split(" -")[0],
             team=team_option,
             period=period_option,
             events_df=events_df,
@@ -233,14 +211,16 @@ with tab3:
         events_json=events_json,
         events_df=events_df,
     )
-    lineup = list(radar_metrics.get_lineup())
-    lineup = [l for l in lineup if l is not None]
+
+    lineup = radar_metrics.get_player_positions(POSITION_LABELS)
 
     with col3:
         player_option = st.selectbox("Select Player", lineup)
 
-    st.write("Single player viz")
-    radar_metrics.generate_spider_chart_values(player=player_option)
+    # st.dataframe(
+    #     radar_metrics.generate_spider_chart_values_df(), use_container_width=True
+    # )
+    radar_metrics.generate_spider_chart_values(player=player_option.split(" -")[0])
     player_vals = radar_metrics.spider_values[0]
     fig, axis = radar_metrics.generate_spider_chart(player_vals)
     st.pyplot(fig)
@@ -266,13 +246,15 @@ with tab3:
             events_json=events_json,
             events_df=events_df,
         )
-        lineup2 = list(radar_metrics2.get_lineup())
-        lineup2 = [l for l in lineup2 if l is not None]
+
+        lineup2 = radar_metrics2.get_player_positions(POSITION_LABELS)
 
         with col3:
             player_option2 = st.selectbox("Select Players", lineup2)
 
-        radar_metrics2.generate_spider_chart_values(player=player_option2)
+        radar_metrics2.generate_spider_chart_values(
+            player=player_option2.split(" -")[0]
+        )
         player_vals2 = radar_metrics2.spider_values[0]
         fig2, ax2 = comparison_spider(
             player1_values=player_vals,
@@ -299,21 +281,24 @@ with tab4:
         ]
         numbers = pd.json_normalize(lineup1)
 
-        numbers = numbers[["player.name", "jersey_number"]]
-        numbers.columns = ["player", "number"]
+        numbers = numbers[["player.name", "position.name"]]
 
-        lineup = np.array(numbers["player"])
+        lineup = numbers.apply(
+            lambda row: f"{row['player.name']} - {POSITION_LABELS.get(row['position.name'])}",
+            axis=1,
+        ).tolist()
 
-        player_option_hm = st.selectbox("Select Player", lineup)
+        player_option_hm = st.selectbox("Select Player HM", lineup)
 
     create_heatmap(
-        events_df, period=period_option, team=team_option, player=player_option_hm
+        events_df,
+        period=period_option,
+        team=team_option,
+        player=player_option_hm.split(" -")[0],
     )
 
 with tab5:
     events_json = st.session_state["normalized_events_df"]
-
-    df_all = events_json
 
     # with col1:
     # team_option = st.selectbox("Select Teams", (np.unique(shots_df["team"])))
