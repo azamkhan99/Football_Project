@@ -8,11 +8,16 @@ from PIL import Image
 
 def main():
 
-    st.title("Football Streamlit App")
+    col1, col2 = st.columns((1, 3))
 
-    # image = Image.open("Manchester City WFC.png")
+    with col1:
+        image = Image.open("mnc.png")
 
-    # st.image(image)
+        st.image(image, use_column_width=True)
+
+    with col2:
+        st.title(":blue[Data Strikers]")
+        st.title("Matchday Statistics & Visualisations")
 
     data_upload_page = DataUploadPage()
     data_upload_page()
