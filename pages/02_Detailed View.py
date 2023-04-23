@@ -139,9 +139,9 @@ with tab2:
 
         df_all = events_json
 
-        team_option = st.selectbox("Select Side", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Team:", (np.unique(shots_df["team"])))
 
-        period_option = st.selectbox("Select Period", [1, 2, "FT"])
+        period_option = st.selectbox("Select Period:", [1, 2, "FT"])
 
         lineup1 = df_all.loc[df_all["team.name"] == team_option]["tactics.lineup"].iloc[
             0
@@ -167,9 +167,9 @@ with tab2:
 
         df_all = events_json
 
-        team_option = st.selectbox("Select Side2", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Side 2", (np.unique(shots_df["team"])))
 
-        period_option = st.selectbox("Select Period2", [1, 2, "FT"])
+        period_option = st.selectbox("Select Period 2", [1, 2, "FT"])
 
         lineup1 = df_all.loc[df_all["team.name"] == team_option]["tactics.lineup"].iloc[
             0
@@ -182,7 +182,7 @@ with tab2:
             axis=1,
         ).tolist()
 
-        player_option_n = st.selectbox("Select Passer2", lineup)
+        player_option_n = st.selectbox("Select Passer 2", lineup)
 
         plot_pass_network(
             selected_player=player_option_n.split(" -")[0],
@@ -233,10 +233,10 @@ with tab3:
         col1, col2, col3 = st.columns(3)
         with col1:
             team_option2 = st.selectbox(
-                "Select Club for second player", (np.unique(shots_df["team"]))
+                "Select Club for Second Player", (np.unique(shots_df["team"]))
             )
         with col2:
-            period_option2 = st.selectbox("Select which half", [1, 2, "FT"])
+            period_option2 = st.selectbox("Select Period to Analyse", [1, 2, "FT"])
 
         radar_metrics2 = RadarChartMetrics(
             # player="Alex Greenwood",
@@ -250,7 +250,7 @@ with tab3:
         lineup2 = radar_metrics2.get_player_positions(POSITION_LABELS)
 
         with col3:
-            player_option2 = st.selectbox("Select Players", lineup2)
+            player_option2 = st.selectbox("Select Second Player", lineup2)
 
         radar_metrics2.generate_spider_chart_values(
             player=player_option2.split(" -")[0]
@@ -288,7 +288,7 @@ with tab4:
             axis=1,
         ).tolist()
 
-        player_option_hm = st.selectbox("Select Player HM", lineup)
+        player_option_hm = st.selectbox("Select Player HeatMap", lineup)
 
     create_heatmap(
         events_df,
