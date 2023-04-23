@@ -100,7 +100,19 @@ st.dataframe(s, use_container_width=True)
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["Shot Analysis", "Passing Analysis", "Player Comparison", "Heatmap", "XG"]
 )
+
 with tab1:
+    events_json = st.session_state["normalized_events_df"]
+
+    # with col1:
+    # team_option = st.selectbox("Select Teams", (np.unique(shots_df["team"])))
+
+    period_option = period_option = st.selectbox("Choose Half - ", [1, 2, "FT"])
+
+    step_graph(events_json, "Arsenal WFC", period=period_option)
+
+
+with tab2:
     shots_df = st.session_state["shots_df"]
 
     # Define pitch object with desired dimensions and color scheme
@@ -115,7 +127,7 @@ with tab1:
     create_shots_vis(team=team_option, period=period_option, shots_df=shots_df)
 
 
-with tab2:
+with tab3:
     events_df = st.session_state["events_df"]
     normalized_events_df = st.session_state["normalized_events_df"]
 
@@ -191,7 +203,7 @@ with tab2:
             events_df=events_df,
         )
 
-with tab3:
+with tab4:
     events_df = st.session_state["events_df"]
     shots_df = st.session_state["shots_df"]
     events_json = st.session_state["events_json"]
@@ -265,7 +277,7 @@ with tab3:
         st.pyplot(fig2)
 
 
-with tab4:
+with tab5:
     events_json = st.session_state["normalized_events_df"]
     df_all = events_json
 
@@ -296,13 +308,3 @@ with tab4:
         team=team_option,
         player=player_option_hm.split(" -")[0],
     )
-
-with tab5:
-    events_json = st.session_state["normalized_events_df"]
-
-    # with col1:
-    # team_option = st.selectbox("Select Teams", (np.unique(shots_df["team"])))
-
-    period_option = period_option = st.selectbox("Choose Halfs", [1, 2, "FT"])
-
-    step_graph(events_json, "Arsenal WFC", period=period_option)
