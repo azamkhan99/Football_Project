@@ -325,18 +325,21 @@ with tab5:
     events_json = st.session_state["normalized_events_df"]
     df_all = events_json
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
+    # with col1:
+    #     team_option = st.selectbox("Select Teams", (teams))
+    # with col2:
+    #     period_option = st.selectbox("Select Periods", [1, 2, "FT"])
+    # with col3:
     with col1:
         team_option = st.selectbox("Select Teams", (teams))
-    with col2:
         period_option = st.selectbox("Select Periods", [1, 2, "FT"])
-    with col3:
         lineup1 = df_all.loc[df_all["team.name"] == team_option]["tactics.lineup"].iloc[
             0
         ]
         numbers = pd.json_normalize(lineup1)
-
+            
         numbers = numbers[["player.name", "position.name"]]
 
         lineup = numbers.apply(
@@ -346,9 +349,32 @@ with tab5:
 
         player_option_hm = st.selectbox("Select Player HeatMap", lineup)
 
-    create_heatmap(
-        events_df,
-        period=period_option,
-        team=team_option,
-        player=player_option_hm.split(" -")[0],
-    )
+        create_heatmap(
+            events_df,
+            period=period_option,
+            team=team_option,
+            player=player_option_hm.split(" -")[0],
+        )
+    with col2:
+        team_option = st.selectbox("Select Team 2", (teams), key='heat1')
+        period_option = st.selectbox("Select Period 2", [1, 2, "FT"], key='heat2')
+        lineup1 = df_all.loc[df_all["team.name"] == team_option]["tactics.lineup"].iloc[
+            0
+        ]
+        numbers = pd.json_normalize(lineup1)
+            
+        numbers = numbers[["player.name", "position.name"]]
+
+        lineup = numbers.apply(
+            lambda row: f"{row['player.name']} - {POSITION_LABELS.get(row['position.name'])}",
+            axis=1,
+        ).tolist()
+
+        player_option_hm = st.selectbox("Select Player HeatMap 2", lineup, key='heat3')
+
+        create_heatmap(
+            events_df,
+            period=period_option,
+            team=team_option,
+            player=player_option_hm.split(" -")[0],
+        )

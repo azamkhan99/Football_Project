@@ -29,8 +29,17 @@ def create_shots_vis(team, period, shots_df, detail):
     else:
         shots = shots_df[(shots_df["team"] == team) & (shots_df["period"] == period)]
 
+    pitchshot = Pitch(
+    pitch_type="statsbomb",
+    line_color="#ffffff",
+    pitch_color="#567d46",
+    goal_type="box",
+    axis=True,
+    label=True,
+    tick=True
+)
     # Create figure and axis using pitch object
-    fig, ax = PITCH.draw(figsize=(16, 11))
+    fig, ax = pitchshot.draw(figsize=(16, 11))
 
     # Create scatter plot with color coding by goals vs no goals
     colors = []
@@ -93,8 +102,8 @@ def create_shots_vis(team, period, shots_df, detail):
     )
 
     # Remove ticks and axis labels
-    ax.set_xticks([])
-    ax.set_yticks([])
+    #ax.set_xticks([])
+    #ax.set_yticks([])
     label = f"Total Shots: {len(shots)}"
     plt.text(
         0.1,
@@ -110,7 +119,7 @@ def create_shots_vis(team, period, shots_df, detail):
     st.pyplot(fig)
     shots = shots[['team', 'player', 'outcome', 'statsbomb_xg', 'technique', 'body_part', 'x', 'y']]
     if detail == True:
-        st.dataframe(shots, use_container_width=True)
+        st.dataframe(shots.sort_values(by='outcome'), use_container_width=True)
 
 def create_pass_network(team, period, data, json, detail):
     df = data
@@ -166,6 +175,20 @@ def create_pass_network(team, period, data, json, detail):
     assist = assist.groupby('player.name').count()['id'].reset_index()
     assist.columns = ['player', 'assists'] 
     m_per_player_pass_count = m_per_player_pass_count.merge(assist, how='left', on="player")
+
+    cross = df_all.loc[(df_all['pass.cross'] == True)]
+    cross = cross.groupby('player.name').count()['id'].reset_index()
+    cross.columns = ['player', 'crosses'] 
+    m_per_player_pass_count = m_per_player_pass_count.merge(cross, how='left', on="player")
+
+    lineup1 = df_all.loc[df_all["team.name"] == team]["tactics.lineup"].iloc[
+            0
+        ]
+    numbers = pd.json_normalize(lineup1)
+    numbers = numbers[["player.name", "position.name"]]
+    numbers.columns = ['player', 'position']
+    m_per_player_pass_count = m_per_player_pass_count.merge(numbers, how='left', on="player")
+
 
     m_per_player_pass_count = m_per_player_pass_count.fillna(0)
 
@@ -241,13 +264,15 @@ def create_pass_network(team, period, data, json, detail):
 
     st.pyplot(fig)
     if detail == True:
-        m_per_player_pass_count = m_per_player_pass_count[['number', 'player', 'pass_count', 'key_passes', 'assists']].sort_values(by="pass_count", ascending=False)
+        m_per_player_pass_count = m_per_player_pass_count[['number', 'player', 'position', 'pass_count', 'key_passes', 'assists', 'crosses']].sort_values(by="pass_count", ascending=False)
         net1, net2 = st.columns(2)
         with net1:
-            st.write("Pass count, key passes and assists per player")
-            st.dataframe(m_per_player_pass_count.style.set_precision(0), use_container_width=True)
+            st.subheader("Passing Stats per player")
+            s = m_per_player_pass_count.style.set_precision(0)\
+                .highlight_max(props='color:red', subset=['pass_count', 'key_passes', 'assists', 'crosses'])
+            st.dataframe(s, use_container_width=True)
         with net2:
-            st.write("Pass count per passing pair")
+            st.subheader("Pass Count per passing pair")
             st.dataframe(m_player_pass_count[['player','pass_recipient_name', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
 
 
@@ -552,7 +577,12 @@ def create_heatmap(df, period, team, player):
 
     # Calculate average location per player
     # player_locs = events.groupby('player')['location_x', 'location_y'].reset_index()
-
+    PITCH = Pitch(
+    pitch_type="statsbomb",
+    line_color="#ffffff",
+    pitch_color="#567d46",
+    goal_type="box",
+)
     fig, ax = PITCH.draw(figsize=(16, 11))
 
     # Create heatmap
@@ -820,7 +850,7 @@ def plot_pass_network(selected_player, team, period, events_df):
                 linewidth=0.5,
                 alpha=0.3,
                 s=100,
-                label=player,
+                label=f'{player}: {len(player_passes_subset)}',
             )
             legend_players.add(player)
 

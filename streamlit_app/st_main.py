@@ -8,10 +8,10 @@ from PIL import Image
 
 def main():
 
-    col1, col2 = st.columns((1, 3))
+    col1, col2 = st.columns((0.4, 3))
 
     with col1:
-        image = Image.open("mnc.png")
+        image = Image.open("Manchester_City_FC_badge.svg.webp")
 
         st.image(image, use_column_width=True)
 
