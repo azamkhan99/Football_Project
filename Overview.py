@@ -4,7 +4,7 @@ from PIL import Image
 
 
 st.set_page_config(
-    layout="wide", page_icon=Image.open("mnc.png")
+    layout="wide", page_icon=Image.open("Manchester_City_FC_badge.svg.webp")
 )  # page_title='Stroke Prediction',
 with st.sidebar.container():
     image = Image.open("Manchester_City_FC_badge.svg.webp")

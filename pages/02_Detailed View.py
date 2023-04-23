@@ -119,7 +119,7 @@ TEAM_LOGOS = {
     # Add more team names and logo URLs here
 }
 opp_image = TEAM_LOGOS[opponent]
-col1, col2 , col3 = st.columns([1,5,3])
+left, col1, col2 , col3 = st.columns([2,1.3,7,3])
 with col1:
     image = Image.open("Manchester_City_FC_badge.svg.webp")
     st.image(image, width=100)
@@ -127,9 +127,10 @@ with col2:
     st.title(f"Manchester City WFC [{goals_mcfc} - {goals_opp}] {opponent}")
 with col3:
     st.image(opp_image, width=180)
-period_option_stat = st.selectbox("Half", [1, 2, "FT"], key='stat')
+
+# period_option_stat = st.selectbox("Half", [1, 2, "FT"], key='stat')
 stats_df, goals_mcfc, goals_opp = create_base_stats(
-    lineup_df=lineup_df, shots_df=shots_df, df=events_df, json=events_json, period=period_option_stat
+    lineup_df=lineup_df, shots_df=shots_df, df=events_df, json=events_json, period=0
 )
 
 s = stats_df.style.highlight_max(props='color:red', axis=1)\
@@ -150,7 +151,7 @@ with tab1:
 
     period_option = period_option = st.selectbox("Choose Half - ", [1, 2, "FT"])
 
-    step_graph(events_json, "Arsenal WFC", period=period_option)
+    step_graph(events_json, "Arsenal WFC", period=period_option, detail=True)
 
 
 with tab2:

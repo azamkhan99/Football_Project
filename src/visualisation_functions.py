@@ -88,7 +88,7 @@ def create_shots_vis(team, period, shots_df, detail):
         f"Shots for {team} - Half: {period}",
         fontsize=26,
         fontweight="bold",
-        y=1.03,
+        y=1.02,
         color="black",
     )
 
@@ -199,11 +199,11 @@ def create_pass_network(team, period, data, json, detail):
     average_x = m_per_player_pass_count.x.mean()
     plt.axvline(x = average_x, color = 'b', label = 'axvline - full height', zorder=0.5, linestyle='dashed', lw=4)
 
-    cax = fig.add_axes([0.97, 0.25, 0.03, 0.5])
+    cax = fig.add_axes([0.82, 0.25, 0.03, 0.5])
     norm = mpl.colors.Normalize(vmin=0, vmax=num_passes.max())
     cb = plt.colorbar(cm.ScalarMappable(cmap=colormap, norm=norm), cax=cax)
-    cb.ax.tick_params(labelsize=14)
-    cb.set_label("Number of Passes", fontsize=16)
+    cb.ax.tick_params(labelsize=14, color='white')
+    cb.set_label("Number of Passes", fontsize=16, color='white')
 
     for i in range(len(m_player_pass_count)):
         PITCH.annotate(
@@ -245,7 +245,7 @@ def create_pass_network(team, period, data, json, detail):
         net1, net2 = st.columns(2)
         with net1:
             st.write("Pass count, key passes and assists per player")
-            st.dataframe(m_per_player_pass_count.style.set_precision(0))
+            st.dataframe(m_per_player_pass_count.style.set_precision(0), use_container_width=True)
         with net2:
             st.write("Pass count per passing pair")
             st.dataframe(m_player_pass_count[['player','pass_recipient_name', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
@@ -605,7 +605,7 @@ def create_heatmap(df, period, team, player):
     st.pyplot(fig)
 
 
-def step_graph(json_file, opponent, period):
+def step_graph(json_file, opponent, period, detail):
 
     df_all = json_file
 
@@ -634,13 +634,13 @@ def step_graph(json_file, opponent, period):
     ]
 
     mcfc_sumxg = mcfc_shots.loc[mcfc_shots["team.name"] == "Manchester City WFC"][
-        ["timestamp", "minute", "second", "shot.statsbomb_xg"]
+        ["timestamp", "player.name", "minute", "second", "shot.statsbomb_xg"]
     ]
     mcfc_sumxg = mcfc_sumxg.fillna(0)
     mcfc_sumxg["xg_sum"] = mcfc_sumxg["shot.statsbomb_xg"].cumsum()
 
     opp_sumxg = mcfc_shots.loc[mcfc_shots["team.name"] == opponent][
-        ["timestamp", "minute", "second", "shot.statsbomb_xg"]
+        ["timestamp", "player.name", "minute", "second", "shot.statsbomb_xg"]
     ]
     opp_sumxg = opp_sumxg.fillna(0)
     opp_sumxg["xg_sum"] = opp_sumxg["shot.statsbomb_xg"].cumsum()
@@ -655,27 +655,33 @@ def step_graph(json_file, opponent, period):
 
     mcfc_sumxg
     fig, ax = plt.subplots()
-    fig.set_facecolor("#444444")
-    ax.patch.set_facecolor("#444444")
+    fig.set_facecolor("lightgrey")
+    ax.patch.set_facecolor("lightgrey")
     mcfc_sumxg.plot(
-        x="minute", y="xg_sum", drawstyle="steps", ax=ax, color="#6CABDD", linewidth=2
+        x="minute", y="xg_sum", drawstyle="steps", ax=ax, color="#67b1e7", linewidth=2
     )
     opp_sumxg.plot(
         x="minute", y="xg_sum", ax=ax, drawstyle="steps", color="red", linewidth=2
     )
-    plt.xticks(color="white")
-    plt.yticks(color="white")
-    plt.ylabel("xG", color="white")
-    plt.xlabel("Minute", color="white")
+    plt.xticks(color="black")
+    plt.yticks(color="black")
+    plt.ylabel("xG", color="black")
+    plt.xlabel("Minute", color="black")
     plt.title(
-        f"Expected Goals for Manchester City WFC vs {opponent}", color="white", y=1
+        f"Expected Goals for Manchester City WFC vs {opponent}", color="black", y=1
     )
-    ax.grid(lw=0.5, color="lightgrey", axis="y", zorder=1)
+    ax.grid(lw=0.5, color="black", axis="y", zorder=1)
     plt.legend(["Manchester City WFC", opponent])
 
     # next annotate goals
     # for i in mcfc_shots.iterrows:
     st.pyplot(fig)
+    if detail == True:
+        coll1, coll2 = st.columns(2)
+        with coll1:   
+            st.dataframe(mcfc_sumxg[1:-1], use_container_width=True)
+        with coll2:
+            st.dataframe(opp_sumxg[1:-1], use_container_width=True)
 
     # xg curve seems to be one period behind, ie first xg should be at 3 mins not 0 mins
 
