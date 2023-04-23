@@ -98,7 +98,7 @@ st.dataframe(s, use_container_width=True)
 
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Shot Analysis", "Passing Analysis", "Player Comparison", "Heatmap", "XG"]
+    ["XG", "Shot Analysis", "Passing Analysis", "Player Comparison", "Heatmap"]
 )
 
 with tab1:
