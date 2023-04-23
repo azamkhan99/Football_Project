@@ -88,13 +88,24 @@ def create_shots_vis(team, period, shots_df, detail):
         f"Shots for {team} - Half: {period}",
         fontsize=26,
         fontweight="bold",
-        y=1.08,
+        y=1.03,
         color="black",
     )
 
     # Remove ticks and axis labels
     ax.set_xticks([])
     ax.set_yticks([])
+    label = f"Total Shots: {len(shots)}"
+    plt.text(
+        0.1,
+        0.965,
+        label,
+        transform=ax.transAxes,
+        fontsize=24,
+        fontname="Arial",
+        fontweight="bold",
+        color="white",
+    )
     #mplcursors.cursor(hover=True)
     st.pyplot(fig)
     shots = shots[['team', 'player', 'outcome', 'statsbomb_xg', 'technique', 'body_part', 'x', 'y']]
@@ -145,6 +156,18 @@ def create_pass_network(team, period, data, json, detail):
     m_per_player_pass_count = m_per_player_pass_count.merge(numbers, on="player")
 
     m_player_pass_count.sort_values(by="pass_count", ascending=False).head(15)
+
+    key_pass = df_all.loc[(df_all['pass.shot_assist'] == True)]
+    key_pass = key_pass.groupby('player.name').count()['id'].reset_index()
+    key_pass.columns = ['player', 'key_passes'] 
+    m_per_player_pass_count = m_per_player_pass_count.merge(key_pass, how='left', on="player")
+
+    assist = df_all.loc[(df_all['pass.goal_assist'] == True)]
+    assist = assist.groupby('player.name').count()['id'].reset_index()
+    assist.columns = ['player', 'assists'] 
+    m_per_player_pass_count = m_per_player_pass_count.merge(assist, how='left', on="player")
+
+    m_per_player_pass_count = m_per_player_pass_count.fillna(0)
 
     # Create figure and axis using pitch object
     fig, ax = PITCH.draw(figsize=(16, 11))
@@ -204,13 +227,13 @@ def create_pass_network(team, period, data, json, detail):
     # Remove ticks and axis labels
     ax.set_xticks([])
     ax.set_yticks([])
-    label = f"Total passes: {num_passes.sum()}"
+    label = f"Total Passes: {num_passes.sum()}"
     plt.text(
         0.1,
-        0.01,
+        0.965,
         label,
         transform=ax.transAxes,
-        fontsize=18,
+        fontsize=24,
         fontname="Arial",
         fontweight="bold",
         color="white",
@@ -218,10 +241,11 @@ def create_pass_network(team, period, data, json, detail):
 
     st.pyplot(fig)
     if detail == True:
+        m_per_player_pass_count = m_per_player_pass_count[['number', 'player', 'pass_count', 'key_passes', 'assists']].sort_values(by="pass_count", ascending=False)
         net1, net2 = st.columns(2)
         with net1:
-            st.write("Pass count per player")
-            st.dataframe(m_per_player_pass_count[['number', 'player', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
+            st.write("Pass count, key passes and assists per player")
+            st.dataframe(m_per_player_pass_count.style.set_precision(0))
         with net2:
             st.write("Pass count per passing pair")
             st.dataframe(m_player_pass_count[['player','pass_recipient_name', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
@@ -392,8 +416,12 @@ def plot_full_pass_network(team, period, events_df):
     st.pyplot(fig)
 
 
-def create_base_stats(lineup_df, shots_df, df, json):
+def create_base_stats(lineup_df, shots_df, df, json, period):
 
+    # if period == "FT":
+    #     shots_df = shots_df
+    # else:
+    #     shots_df = shots_df[(shots_df["period"] == period)]
     lineup = pd.DataFrame(lineup_df)
     opponent = lineup.iloc[1, 1]
     df_all = json
@@ -446,6 +474,15 @@ def create_base_stats(lineup_df, shots_df, df, json):
 
     off_mcfc = len(df_all.loc[(df_all['type.name'] == 'Offside') & (df_all["team.name"] == 'Manchester City WFC')])
     off_opp = len(df_all.loc[(df_all['type.name'] == 'Offside') & (df_all["team.name"] == opponent)])
+
+    possession = df_all[['possession_team.name']]
+    possession_group = possession.groupby(['possession_team.name'], as_index=False).value_counts()
+    possession_group['percentage'] = 100*possession_group['count']/possession_group['count'].sum()
+    possession_group.round(0)
+    poss_mcfc = possession_group.loc[possession_group['possession_team.name'] == 'Manchester City WFC'].values[0,2]
+    poss_opp = possession_group.loc[possession_group['possession_team.name'] == opponent].values[0,2]
+    pass_mcfc = len(df_all.loc[(df_all['type.name'] == 'Pass') & (df_all["team.name"] == 'Manchester City WFC')])
+    pass_opp = len(df_all.loc[(df_all['type.name'] == 'Pass') & (df_all["team.name"] == opponent)])
     # Match stats table
     stats = {
         "Goals": [goals_mcfc, goals_opp],
@@ -456,13 +493,13 @@ def create_base_stats(lineup_df, shots_df, df, json):
             (100 * sot_mcfc / shots_mcfc),
             (100 * sot_opp / shots_opp),
         ],
+        "Possession (%)": [poss_mcfc, poss_opp],
+        "Passes": [pass_mcfc, pass_opp],
         "Fouls": [foul_mcfc, foul_opp],
         "Yellow Cards": [yellow_mcfc,yellow_opp],  # or bookings
         "Corners": [corner_mcfc, corner_opp],
-        "Offsides": [off_mcfc, off_opp],
-        "Possession": [],
-        "Passes": [],
-        "Passes Complete": [],
+        "Offsides": [off_mcfc, off_opp]
+        #"Passes Complete": [],
     }
     stats_df = df.from_dict(
         stats, orient="index", columns=["Manchester City WFC", opponent]
