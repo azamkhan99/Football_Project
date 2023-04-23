@@ -18,6 +18,16 @@ from soccerplots import radar_chart
 from soccerplots.radar_chart import Radar
 
 
+first_elem = "Manchester City WFC"
+
+
+def custom_key_func(elem):
+    if elem == first_elem:
+        return False
+    else:
+        return True
+
+
 POSITION_LABELS = {
     "Goalkeeper": "GK",
     "Right Back": "RB",
@@ -83,6 +93,7 @@ def comparison_spider(player1_values, team1, player2_values, team2):
 # st.title("Manchester City WFC visualisation")
 
 shots_df = st.session_state["shots_df"]
+teams = sorted(list(np.unique(shots_df["team"])), key=custom_key_func)
 events_df = st.session_state["events_df"]
 lineup_df = st.session_state["lineups"]
 opponent = lineup_df.iloc[1, 1]
@@ -120,7 +131,7 @@ with tab2:
     col1, col2 = st.columns(2)
 
     with col1:
-        team_option = st.selectbox("Team", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Team", (teams))
     with col2:
         period_option = st.selectbox("Half", [1, 2, "FT"])
 
@@ -134,7 +145,7 @@ with tab3:
     col1, col2 = st.columns(2)
 
     with col1:
-        team_option = st.selectbox("Select Team", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Team", (teams))
     with col2:
         period_option = st.selectbox("Select Half", [1, 2, "FT"])
 
@@ -151,7 +162,7 @@ with tab3:
 
         df_all = events_json
 
-        team_option = st.selectbox("Select Team:", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Team:", (teams))
 
         period_option = st.selectbox("Select Period:", [1, 2, "FT"])
 
@@ -179,7 +190,7 @@ with tab3:
 
         df_all = events_json
 
-        team_option = st.selectbox("Select Side 2", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Side 2", (sorted(teams)))
 
         period_option = st.selectbox("Select Period 2", [1, 2, "FT"])
 
@@ -211,7 +222,7 @@ with tab4:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        team_option = st.selectbox("Select Club", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Club", (teams))
     with col2:
         period_option = st.selectbox("Select Half period", [1, 2, "FT"])
 
@@ -245,7 +256,7 @@ with tab4:
         col1, col2, col3 = st.columns(3)
         with col1:
             team_option2 = st.selectbox(
-                "Select Club for Second Player", (np.unique(shots_df["team"]))
+                "Select Club for Second Player", (sorted(teams))
             )
         with col2:
             period_option2 = st.selectbox("Select Period to Analyse", [1, 2, "FT"])
@@ -284,7 +295,7 @@ with tab5:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        team_option = st.selectbox("Select Teams", (np.unique(shots_df["team"])))
+        team_option = st.selectbox("Select Teams", (teams))
     with col2:
         period_option = st.selectbox("Select Periods", [1, 2, "FT"])
     with col3:
