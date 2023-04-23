@@ -1,5 +1,6 @@
 from mplsoccer import Pitch
 import pandas as pd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.patheffects as path_effects
@@ -9,7 +10,9 @@ import seaborn as sns
 import matplotlib.cm as cm
 import json
 from src.spider import RadarChartMetrics
+import mplcursors 
 
+mplcursors.cursor()
 PITCH = Pitch(
     pitch_type="statsbomb",
     line_color="#ffffff",
@@ -18,7 +21,7 @@ PITCH = Pitch(
 )
 
 
-def create_shots_vis(team, period, shots_df):
+def create_shots_vis(team, period, shots_df, detail):
 
     # Filter for shots in first half
     if period == "FT":
@@ -30,24 +33,52 @@ def create_shots_vis(team, period, shots_df):
     fig, ax = PITCH.draw(figsize=(16, 11))
 
     # Create scatter plot with color coding by goals vs no goals
-    colors = ["red" if x else "green" for x in shots["outcome"] == "Goal"]
+    colors = []
+    edge = []
+    goal = 0
+    on_t = 0
+    off_t = 0
+    for x in shots['outcome']:
+        if x == 'Goal':
+            colors.append('teal')
+            edge.append('white')
+            goal += 1
+        elif x == 'Blocked' or x == 'Saved':
+            colors.append('orange')
+            edge.append('black')
+            on_t += 1
+        else:
+            colors.append('gray')
+            edge.append('black')
+            off_t += 1
+
     ax.scatter(
         shots["x"],
         shots["y"],
         c=colors,
-        edgecolors="white",
-        alpha=0.8,
-        s=200,
+        edgecolors=edge,
+        alpha=1,
+        s=250,
         zorder=3,
     )
-
+    #goal = len()
     # Add legend
-    goal_patch = mpatches.Patch(color="red", label="GOAL")
-    no_goal_patch = mpatches.Patch(color="green", label="No Goal")
+    goal_patch = mpatches.Patch(color='teal', label=f'GOAL: {goal}')
+    on_target_patch = mpatches.Patch(color='orange', label=f'On Target: {off_t}')
+    off_target_patch = mpatches.Patch(color='gray', label=f'Off Target: {off_t}')
+
+    # for i in range(len(shots)):
+    #     PITCH.annotate(
+    #         shots.player[i],
+    #         (shots.x[i], shots.y[i]),
+    #         ax=ax
+    #     )
+    # can't figure out why this is not working
+
     ax.legend(
-        handles=[goal_patch, no_goal_patch],
-        loc="lower right",
-        fontsize=14,
+        handles=[goal_patch, on_target_patch, off_target_patch],
+        loc="upper right",
+        fontsize=24,
         facecolor="white",
         edgecolor="white",
     )
@@ -64,11 +95,13 @@ def create_shots_vis(team, period, shots_df):
     # Remove ticks and axis labels
     ax.set_xticks([])
     ax.set_yticks([])
-
+    #mplcursors.cursor(hover=True)
     st.pyplot(fig)
+    shots = shots[['team', 'player', 'outcome', 'statsbomb_xg', 'technique', 'body_part', 'x', 'y']]
+    if detail == True:
+        st.dataframe(shots, use_container_width=True)
 
-
-def create_pass_network(team, period, data, json):
+def create_pass_network(team, period, data, json, detail):
     df = data
 
     df_all = json
@@ -109,6 +142,7 @@ def create_pass_network(team, period, data, json):
     m_avg_loc.columns = ["pass_recipient_name", "x_end", "y_end"]
     m_player_pass_count = m_player_pass_count.merge(m_avg_loc, on="pass_recipient_name")
     m_player_pass_count = m_player_pass_count.merge(numbers, on="player")
+    m_per_player_pass_count = m_per_player_pass_count.merge(numbers, on="player")
 
     m_player_pass_count.sort_values(by="pass_count", ascending=False).head(15)
 
@@ -129,18 +163,22 @@ def create_pass_network(team, period, data, json):
         color=colors,
         cmap=colormap,
     )
+    team_color = {'Manchester City WFC': '#6CABDD', 'Arsenal WFC': '#EF0107'}
     PITCH.scatter(
         m_per_player_pass_count.x,
         m_per_player_pass_count.y,
         alpha=1,
         s=100 * m_per_player_pass_count.pass_count,
-        color="#6CABDD",
+        color=team_color[team],
         edgecolor="white",
         ax=ax,
     )
+    average_x = m_per_player_pass_count.x.mean()
+    plt.axvline(x = average_x, color = 'b', label = 'axvline - full height', zorder=0.5, linestyle='dashed', lw=4)
 
-    cax = fig.add_axes([0.95, 0.25, 0.03, 0.5])
-    cb = plt.colorbar(cm.ScalarMappable(cmap=colormap), cax=cax)
+    cax = fig.add_axes([0.97, 0.25, 0.03, 0.5])
+    norm = mpl.colors.Normalize(vmin=0, vmax=num_passes.max())
+    cb = plt.colorbar(cm.ScalarMappable(cmap=colormap, norm=norm), cax=cax)
     cb.ax.tick_params(labelsize=14)
     cb.set_label("Number of Passes", fontsize=16)
 
@@ -156,10 +194,10 @@ def create_pass_network(team, period, data, json):
 
     # Set plot title
     ax.set_title(
-        f"Pass network for {team} - Half-{period}",
+        f"Pass Network for {team} - Half-{period}",
         fontsize=26,
         fontweight="bold",
-        y=1.08,
+        y=1.02,
         color="black",
     )
 
@@ -179,6 +217,14 @@ def create_pass_network(team, period, data, json):
     )
 
     st.pyplot(fig)
+    if detail == True:
+        net1, net2 = st.columns(2)
+        with net1:
+            st.write("Pass count per player")
+            st.dataframe(m_per_player_pass_count[['number', 'player', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
+        with net2:
+            st.write("Pass count per passing pair")
+            st.dataframe(m_player_pass_count[['player','pass_recipient_name', 'pass_count']].sort_values(by="pass_count", ascending=False), use_container_width=True)
 
 
 def plot_full_pass_network(team, period, events_df):
@@ -346,11 +392,11 @@ def plot_full_pass_network(team, period, events_df):
     st.pyplot(fig)
 
 
-def create_base_stats(lineup_df, shots_df, df):
+def create_base_stats(lineup_df, shots_df, df, json):
 
     lineup = pd.DataFrame(lineup_df)
     opponent = lineup.iloc[1, 1]
-
+    df_all = json
     shots_mcfc = len(shots_df.loc[shots_df["team"] == "Manchester City WFC"])
     shots_opp = len(shots_df.loc[shots_df["team"] == opponent])
     xg_mcfc = shots_df.loc[shots_df["team"] == "Manchester City WFC"]["statsbomb_xg"]
@@ -387,11 +433,19 @@ def create_base_stats(lineup_df, shots_df, df):
             | ((shots_df["team"] == opponent) & (shots_df["outcome"] == "Saved"))
         ]
     )
-    foul_mcfc = len(
+    foul_mcfc = -len(
         df.loc[(df["type"] == "Foul Committed") & (df["team"] == "Manchester City WFC")]
     )
-    foul_opp = len(df.loc[(df["type"] == "Foul Committed") & (df["team"] == opponent)])
+    foul_opp = -len(df.loc[(df["type"] == "Foul Committed") & (df["team"] == opponent)])
 
+    yellow_mcfc = -len(df_all.loc[((df_all['bad_behaviour.card.name'] == 'Yellow Card') | (df_all['foul_committed.card.name'] == 'Yellow Card')) & (df_all["team.name"] == "Manchester City WFC")])
+    yellow_opp = -len(df_all.loc[((df_all['bad_behaviour.card.name'] == 'Yellow Card') | (df_all['foul_committed.card.name'] == 'Yellow Card')) & (df_all["team.name"] == opponent)])
+    
+    corner_mcfc = len(df_all.loc[(df_all['pass.type.name'] == 'Corner') & (df_all["team.name"] == 'Manchester City WFC')])
+    corner_opp = len(df_all.loc[(df_all['pass.type.name'] == 'Corner') & (df_all["team.name"] == opponent)])
+
+    off_mcfc = len(df_all.loc[(df_all['type.name'] == 'Offside') & (df_all["team.name"] == 'Manchester City WFC')])
+    off_opp = len(df_all.loc[(df_all['type.name'] == 'Offside') & (df_all["team.name"] == opponent)])
     # Match stats table
     stats = {
         "Goals": [goals_mcfc, goals_opp],
@@ -403,18 +457,16 @@ def create_base_stats(lineup_df, shots_df, df):
             (100 * sot_opp / shots_opp),
         ],
         "Fouls": [foul_mcfc, foul_opp],
-        "Yellow Cards": [],  # or bookings
-        "Corners": [],
-        "Offsides": [],
+        "Yellow Cards": [yellow_mcfc,yellow_opp],  # or bookings
+        "Corners": [corner_mcfc, corner_opp],
+        "Offsides": [off_mcfc, off_opp],
         "Possession": [],
+        "Passes": [],
+        "Passes Complete": [],
     }
     stats_df = df.from_dict(
         stats, orient="index", columns=["Manchester City WFC", opponent]
     )
-
-    def highlight_max(s):
-        is_max = s == s.max()
-        return ["background-color: yellow" if v else "" for v in is_max]
 
     stats_df = stats_df.round(1)
 
@@ -738,7 +790,7 @@ def plot_pass_network(selected_player, team, period, events_df):
     plt.legend(
         scatterpoints=1,
         loc="lower left",
-        fontsize=12,
+        fontsize=18,
         framealpha=1,
         facecolor="white",
         frameon=True,

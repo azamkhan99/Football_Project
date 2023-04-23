@@ -17,6 +17,11 @@ from src.visualisation_functions import (
 from src.spider import RadarChartMetrics
 from soccerplots import radar_chart
 from soccerplots.radar_chart import Radar
+from PIL import Image
+
+with st.sidebar.container():
+        image = Image.open("Manchester_City_FC_badge.svg.webp")
+        st.image(image)
 
 
 POSITION_LABELS = {
@@ -54,13 +59,14 @@ events_df = st.session_state["events_df"]
 lineup_df = st.session_state["lineups"]
 events_json = st.session_state["normalized_events_df"]
 _, goals_mcfc, goals_opp = create_base_stats(
-    lineup_df=lineup_df, shots_df=shots_df, df=events_df
+    lineup_df=lineup_df, shots_df=shots_df, df=events_df, json=events_json
 )
 
 opponent = lineup_df.iloc[1, 1]
+st.title(f"Manchester City WFC [{goals_mcfc} - {goals_opp}] {opponent}")
 pad1, title, pad2 = st.columns((1, 8, 1))
-with title:
-    st.title(f"Manchester City WFC {goals_mcfc} - {goals_opp} {opponent}")
+# with title:
+#     st.title(f"Manchester City WFC {goals_mcfc} - {goals_opp} {opponent}")
 
 col1, col2 = st.columns(2, gap="medium")
 if goals_mcfc > goals_opp:
@@ -80,11 +86,12 @@ if result == "Loss":
             period=1,
             data=events_df,
             json=events_json,
+            detail=False
         )
 
     with col2:
 
-        st.dataframe(_, use_container_width=True)
+        st.dataframe(_.style.set_precision(0), use_container_width=True)
 
         plot_full_pass_network(
             team=opponent,
@@ -103,10 +110,11 @@ if result == "Win":
             period=1,
             data=events_df,
             json=events_json,
+            detail=False
         )
 
     with col2:
 
-        st.dataframe(_, use_container_width=True)
+        st.dataframe(_.style.set_precision(0), use_container_width=True)
 
-        create_shots_vis(team="Manchester City WFC", period=1, shots_df=shots_df)
+        create_shots_vis(team="Manchester City WFC", period=1, shots_df=shots_df,detail=False)

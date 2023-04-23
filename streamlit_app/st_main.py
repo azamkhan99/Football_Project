@@ -17,7 +17,7 @@ def main():
 
     with col2:
         st.title(":blue[Data Strikers]")
-        st.title("Matchday Statistics & Visualisations")
+        st.title("Matchday Statistics & Visualisation App")
 
     data_upload_page = DataUploadPage()
     data_upload_page()
