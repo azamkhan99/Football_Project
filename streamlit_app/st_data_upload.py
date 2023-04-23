@@ -25,7 +25,7 @@ class DataUploadPage:
         # page_number = st.sidebar.selectbox("Select a page", pages)
 
         st.title(self.title())
-        st.write("WORK ON A BETTER DESCRIPTION: Upload Match data files below")
+        st.write("Upload Football match data files below for visualisation")
         with st.expander("View more information on the input data upload formats"):
             st.markdown(
                 "TO DO: write a more comprehensive guide to uploading data to the app here"
@@ -37,7 +37,7 @@ class DataUploadPage:
         with col1:
             # Streamlit file uploader
             events_json = st.file_uploader(
-                "Upload the Event Data JSON file", type="json"
+                "Upload the StatsBomb Event Data JSON file", type="json"
             )
 
             # Process JSON file:
@@ -75,7 +75,7 @@ class DataUploadPage:
 
         with col2:
             lineups_json = st.file_uploader(
-                "Upload the Lineups Data JSON file", type="json"
+                "Upload the StatsBomb Lineups Data JSON file", type="json"
             )
 
             # File to pandas:

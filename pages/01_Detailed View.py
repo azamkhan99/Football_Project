@@ -16,6 +16,11 @@ from src.visualisation_functions import (
 from src.spider import RadarChartMetrics
 from soccerplots import radar_chart
 from soccerplots.radar_chart import Radar
+from PIL import Image
+
+with st.sidebar.container():
+        image = Image.open("Manchester_City_FC_badge.svg.webp")
+        st.image(image)
 
 
 POSITION_LABELS = {
@@ -88,12 +93,14 @@ lineup_df = st.session_state["lineups"]
 opponent = lineup_df.iloc[1, 1]
 events_json = st.session_state["normalized_events_df"]
 stats_df, goals_mcfc, goals_opp = create_base_stats(
-    lineup_df=lineup_df, shots_df=shots_df, df=events_df
+    lineup_df=lineup_df, shots_df=shots_df, df=events_df, json=events_json
 )
 
-st.title(f"Manchester City WFC {goals_mcfc} - {goals_opp} {opponent}")
+st.title(f"Manchester City WFC [{goals_mcfc} - {goals_opp}] {opponent}")
 
-s = stats_df.style.highlight_max(color="yellow", axis=1)
+
+s = stats_df.style.highlight_max(props='color:red', axis=1)\
+    .set_precision(0)
 st.dataframe(s, use_container_width=True)
 
 
@@ -112,7 +119,7 @@ with tab1:
     with col2:
         period_option = st.selectbox("Half", [1, 2, "FT"])
 
-    create_shots_vis(team=team_option, period=period_option, shots_df=shots_df)
+    create_shots_vis(team=team_option, period=period_option, shots_df=shots_df, detail=True)
 
 
 with tab2:
@@ -131,6 +138,7 @@ with tab2:
         period=period_option,
         data=events_df,
         json=normalized_events_df,
+        detail=True
     )
 
     net1, net2 = st.columns(2)
@@ -223,6 +231,7 @@ with tab3:
     radar_metrics.generate_spider_chart_values(player=player_option.split(" -")[0])
     player_vals = radar_metrics.spider_values[0]
     fig, axis = radar_metrics.generate_spider_chart(player_vals)
+    #st.write(player_vals)
     st.pyplot(fig)
 
     agree = st.checkbox("Player Comparison")

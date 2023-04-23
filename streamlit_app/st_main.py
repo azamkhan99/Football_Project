@@ -8,11 +8,7 @@ from PIL import Image
 
 def main():
 
-    st.title("Football Streamlit App")
-
-    # image = Image.open("Manchester City WFC.png")
-
-    # st.image(image)
+    st.title("DataStrikers Football Visualisation App")
 
     data_upload_page = DataUploadPage()
     data_upload_page()
